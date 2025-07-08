@@ -25,10 +25,8 @@ Create `petstore-config.yaml`:
 ```yaml
 server:
   name: "petstore-demo"
-
 openapi:
   spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
-
 authentication:
   type: "none"
 ```
@@ -71,14 +69,19 @@ server:
 openapi:
   spec_url: "https://api.example.com/openapi.json"  # OpenAPI spec URL
 
+# Authentication is optional - omit for no authentication
 authentication:
-  type: "none"  # No authentication required
+  type: "none"  # Explicit no authentication (same as omitting this section)
 ```
 
 ### Authentication Options
 
 #### No Authentication
 ```yaml
+# Option 1: Omit authentication section entirely (recommended)
+# No authentication section needed
+
+# Option 2: Explicit none type
 authentication:
   type: "none"
 ```
