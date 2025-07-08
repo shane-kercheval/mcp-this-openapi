@@ -1,0 +1,88 @@
+"""Main server for mcp-this-openapi."""
+
+import sys
+from fastmcp import FastMCP
+import asyncio
+from urllib.parse import urlparse
+
+from .config.models import Config
+from .config.loader import load_config
+from .openapi.fetcher import fetch_openapi_spec
+from .openapi.filter import filter_openapi_paths
+from .openapi.auth import create_authenticated_client
+
+
+async def create_mcp_server(config: Config) -> FastMCP:
+    """
+    Create an MCP server from OpenAPI configuration.
+
+    Args:
+        config: Configuration object
+
+    Returns:
+        Configured FastMCP server
+
+    Raises:
+        ValueError: If OpenAPI spec is invalid or missing required fields
+    """
+    # Fetch OpenAPI spec
+    spec = await fetch_openapi_spec(config.openapi.spec_url)
+
+    # Filter paths if patterns are provided
+    if config.include_patterns or config.exclude_patterns:
+        spec = filter_openapi_paths(
+            spec,
+            config.include_patterns,
+            config.exclude_patterns,
+        )
+
+    # Extract base URL from spec
+    if "servers" not in spec or not spec["servers"]:
+        raise ValueError("OpenAPI spec must contain at least one server")
+
+    base_url = spec["servers"][0]["url"]
+
+    # Handle relative URLs by using the spec URL's host
+    if base_url.startswith("/"):
+        parsed_spec_url = urlparse(config.openapi.spec_url)
+        base_url = f"{parsed_spec_url.scheme}://{parsed_spec_url.netloc}{base_url}"
+
+    # Create authenticated client
+    client = create_authenticated_client(config.authentication, base_url)
+
+    # Create FastMCP server
+    return FastMCP.from_openapi(
+        openapi_spec=spec,
+        client=client,
+        name=config.server.name,
+    )
+
+
+def run_server(config_path: str) -> None:
+    """
+    Run the MCP server with the given configuration.
+
+    Args:
+        config_path: Path to the configuration file
+
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        ValueError: If configuration is invalid
+    """
+
+    async def _run_server():  # noqa: ANN202
+        # Load configuration
+        config = load_config(config_path)
+
+        # Log to stderr so it doesn't interfere with MCP protocol
+        print(f"Starting MCP server '{config.server.name}' with OpenAPI spec from {config.openapi.spec_url}", file=sys.stderr)  # noqa: E501
+
+        # Create server
+        server = await create_mcp_server(config)
+
+        print(f"🚀 MCP server '{config.server.name}' is running", file=sys.stderr)
+        return server
+
+    # Run async setup and then start server
+    server = asyncio.run(_run_server())
+    server.run()

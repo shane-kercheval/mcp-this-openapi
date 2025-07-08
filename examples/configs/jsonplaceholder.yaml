@@ -1,0 +1,6 @@
+server:
+  name: "jsonplaceholder-api"
+openapi:
+  spec_url: "https://jsonplaceholder.typicode.com/openapi.json"
+authentication:
+  type: "none"

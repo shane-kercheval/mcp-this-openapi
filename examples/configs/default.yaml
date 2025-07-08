@@ -1,0 +1,6 @@
+server:
+  name: "petstore-api"
+openapi:
+  spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
+authentication:
+  type: "none"

@@ -1,0 +1,49 @@
+[project]
+name = "mcp-this-openapi"
+version = "0.0.2"
+description = "MCP Server that creates tools from OpenAPI/Swagger specifications"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Shane Kercheval", email = "shane.kercheval@gmail.com"},
+]
+keywords = ["MCP", "Claude", "AI", "OpenAPI", "Swagger", "tools"]
+
+dependencies = [
+    "fastmcp>=2.10.2",
+    "httpx>=0.28.1",
+    "mcp>=1.10.1",
+    "pydantic>=2.11.7",
+    "pyyaml>=6.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pip>=25.1.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-timeout>=2.4.0",
+    "respx>=0.22.0",
+    "ruff>=0.12.2",
+]
+
+[project.scripts]
+mcp-this-openapi = "mcp_this_openapi.__main__:main"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_this_openapi"]
+
+[build-system]
+requires = ["hatchling>=1.17.1"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+timeout = 60
+timeout_method = "signal"  # note this only works on unix; "thread" method (default) is safer but might not catch hanging subprocesses
+asyncio_default_fixture_loop_scope = "function"

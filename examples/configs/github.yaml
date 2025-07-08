@@ -1,0 +1,9 @@
+server:
+  name: "github-api"
+openapi:
+  spec_url: "https://api.github.com/openapi.json"
+authentication:
+  type: "bearer"
+  token: "${GITHUB_TOKEN}"
+include_patterns: ["^/repos", "^/user"]
+exclude_patterns: ["^/admin"]
