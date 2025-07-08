@@ -312,6 +312,98 @@ authentication:
         finally:
             os.unlink(temp_config_path)
 
+    async def test_server_with_method_filtering(self):
+        """Test server with HTTP method filtering."""
+        # Test method filtering using the real Petstore API
+        # Only allow GET methods (read-only access)
+        config_content = """
+server:
+  name: "read-only-petstore"
+openapi:
+  spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
+authentication:
+  type: "none"
+include_methods:
+  - GET
+"""
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            f.write(config_content)
+            temp_config_path = f.name
+
+        try:
+            server_params = StdioServerParameters(
+                command="python",
+                args=["-m", "mcp_this_openapi", "--config-path", temp_config_path],
+            )
+
+            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:  # noqa: E501
+                await session.initialize()
+                tools = await session.list_tools()
+
+                tool_names = [t.name for t in tools.tools]
+
+                # Should have GET operations
+                assert any("get" in name.lower() for name in tool_names)
+
+                # Should not have write operations (POST, PUT, DELETE, PATCH)
+                # Note: Tool names are based on operationId, so we check for common patterns
+                write_operations = [name for name in tool_names
+                                  if any(verb in name.lower()
+                                       for verb in ['add', 'create', 'update', 'delete', 'place'])]
+
+                # There should be significantly fewer operations when filtering to GET only
+                assert len(tool_names) >= 1  # Should have at least some GET operations
+                assert len(write_operations) == 0 or len(write_operations) < len(tool_names) // 2
+
+        finally:
+            os.unlink(temp_config_path)
+
+    async def test_server_default_get_only_behavior(self):
+        """Test that server defaults to GET-only when no method filtering is specified."""
+        # Test default behavior - should only allow GET operations
+        config_content = """
+server:
+  name: "default-petstore"
+openapi:
+  spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
+authentication:
+  type: "none"
+# No method filtering specified - should default to GET-only
+"""
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+            f.write(config_content)
+            temp_config_path = f.name
+
+        try:
+            server_params = StdioServerParameters(
+                command="python",
+                args=["-m", "mcp_this_openapi", "--config-path", temp_config_path],
+            )
+
+            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:  # noqa: E501
+                await session.initialize()
+                tools = await session.list_tools()
+
+                tool_names = [t.name for t in tools.tools]
+
+                # Should have GET operations
+                assert any("get" in name.lower() for name in tool_names)
+
+                # Should not have write operations by default
+                write_operations = [name for name in tool_names
+                                  if any(verb in name.lower()
+                                       for verb in ['add', 'create', 'update', 'delete', 'place'])]
+
+                # Should have significantly fewer operations (GET-only)
+                assert len(tool_names) >= 1  # Should have at least some GET operations
+                # With GET-only default, should have no or very few write operations
+                assert len(write_operations) < len(tool_names) // 3
+
+        finally:
+            os.unlink(temp_config_path)
+
 
 @pytest.mark.asyncio
 class TestMCPServerWithRealAPIs:

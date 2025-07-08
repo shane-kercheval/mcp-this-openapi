@@ -20,6 +20,14 @@ def simple_spec():
         return json.load(f)
 
 
+@pytest.fixture
+def multi_method_spec():
+    """Load the multi-method OpenAPI spec fixture."""
+    fixtures_dir = Path(__file__).parent / "fixtures" / "openapi_specs"
+    with open(fixtures_dir / "multi_method.json") as f:
+        return json.load(f)
+
+
 @pytest.mark.asyncio
 async def test_fetch_openapi_spec_json():
     """Test fetching OpenAPI spec as JSON."""
@@ -146,6 +154,157 @@ def test_filter_openapi_paths_preserves_other_sections(simple_spec):  # noqa: AN
     assert result["openapi"] == simple_spec["openapi"]
     assert result["info"] == simple_spec["info"]
     assert result["servers"] == simple_spec["servers"]
+
+
+def test_filter_openapi_methods_include_only(multi_method_spec):  # noqa: ANN001
+    """Test filtering methods with include patterns only."""
+    result = filter_openapi_paths(multi_method_spec, include_methods=["GET", "POST"])
+
+    # Should include GET and POST methods but not PUT, DELETE, PATCH
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+    assert "delete" not in result["paths"]["/users/{userId}"]
+
+    assert "get" in result["paths"]["/admin/users"]
+    assert "post" in result["paths"]["/admin/users"]
+    assert "patch" not in result["paths"]["/admin/users"]
+
+
+def test_filter_openapi_methods_exclude_only(multi_method_spec):  # noqa: ANN001
+    """Test filtering methods with exclude patterns only."""
+    result = filter_openapi_paths(multi_method_spec, exclude_methods=["DELETE", "PUT"])
+
+    # Should exclude DELETE and PUT methods but include others
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+    assert "delete" not in result["paths"]["/users/{userId}"]
+
+    assert "get" in result["paths"]["/admin/users"]
+    assert "post" in result["paths"]["/admin/users"]
+    assert "patch" in result["paths"]["/admin/users"]
+
+
+def test_filter_openapi_methods_include_and_exclude(multi_method_spec):  # noqa: ANN001
+    """Test filtering methods with both include and exclude patterns."""
+    result = filter_openapi_paths(
+        multi_method_spec,
+        include_methods=["GET", "POST", "PUT"],
+        exclude_methods=["PUT"],
+    )
+
+    # Should include GET and POST but exclude PUT (exclude takes precedence)
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+    assert "delete" not in result["paths"]["/users/{userId}"]
+
+
+def test_filter_openapi_methods_case_insensitive(multi_method_spec):  # noqa: ANN001
+    """Test that method filtering is case insensitive."""
+    result = filter_openapi_paths(multi_method_spec, include_methods=["get", "Post"])
+
+    # Should work with mixed case
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+
+
+def test_filter_openapi_paths_and_methods_combined(multi_method_spec):  # noqa: ANN001
+    """Test filtering both paths and methods together."""
+    result = filter_openapi_paths(
+        multi_method_spec,
+        include_patterns=["^/users"],
+        exclude_patterns=["^/admin"],
+        include_methods=["GET", "POST"],
+    )
+
+    # Should include /users paths but exclude /admin paths
+    assert "/users" in result["paths"]
+    assert "/users/{userId}" in result["paths"]
+    assert "/admin/users" not in result["paths"]
+
+    # Should only include GET and POST methods
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+    assert "delete" not in result["paths"]["/users/{userId}"]
+
+
+def test_filter_openapi_methods_removes_empty_paths(multi_method_spec):  # noqa: ANN001
+    """Test that paths with no remaining methods are removed."""
+    result = filter_openapi_paths(multi_method_spec, include_methods=["HEAD"])
+
+    # Since none of the paths have HEAD methods, all paths should be removed
+    assert len(result["paths"]) == 0
+
+
+def test_filter_openapi_methods_preserves_non_method_properties(multi_method_spec):  # noqa: ANN001
+    """Test that non-HTTP method properties are preserved."""
+    # Add a non-method property to test preservation
+    test_spec = multi_method_spec.copy()
+    test_spec["paths"]["/users"]["summary"] = "Users endpoint"
+    test_spec["paths"]["/users"]["description"] = "Manages user resources"
+
+    result = filter_openapi_paths(test_spec, include_methods=["GET"])
+
+    # Should preserve non-method properties
+    assert result["paths"]["/users"]["summary"] == "Users endpoint"
+    assert result["paths"]["/users"]["description"] == "Manages user resources"
+    assert "get" in result["paths"]["/users"]
+    assert "post" not in result["paths"]["/users"]
+
+
+def test_filter_openapi_methods_no_methods_specified(multi_method_spec):  # noqa: ANN001
+    """Test that when no method filters are specified, defaults to GET-only for safety."""
+    result = filter_openapi_paths(multi_method_spec)
+
+    # Should default to GET-only when no method filtering is specified
+    assert "get" in result["paths"]["/users"]
+    assert "post" not in result["paths"]["/users"]
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" not in result["paths"]["/users/{userId}"]
+    assert "delete" not in result["paths"]["/users/{userId}"]
+    assert "get" in result["paths"]["/admin/users"]
+    assert "patch" not in result["paths"]["/admin/users"]
+
+
+def test_filter_openapi_methods_explicit_all_methods(multi_method_spec):  # noqa: ANN001
+    """Test that users can explicitly include all methods to override GET-only default."""
+    result = filter_openapi_paths(
+        multi_method_spec,
+        include_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    )
+
+    # Should include all methods when explicitly specified
+    assert "get" in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+    assert "get" in result["paths"]["/users/{userId}"]
+    assert "put" in result["paths"]["/users/{userId}"]
+    assert "delete" in result["paths"]["/users/{userId}"]
+    assert "get" in result["paths"]["/admin/users"]
+    assert "patch" in result["paths"]["/admin/users"]
+
+
+def test_filter_openapi_methods_exclude_overrides_default(multi_method_spec):  # noqa: ANN001
+    """Test that exclude_methods overrides the GET-only default."""
+    result = filter_openapi_paths(multi_method_spec, exclude_methods=["GET"])
+
+    # Should exclude GET and include all other methods when exclude is specified
+    assert "get" not in result["paths"]["/users"]
+    assert "post" in result["paths"]["/users"]
+    assert "get" not in result["paths"]["/users/{userId}"]
+    assert "put" in result["paths"]["/users/{userId}"]
+    assert "delete" in result["paths"]["/users/{userId}"]
 
 
 def test_create_authenticated_client_none():

@@ -28,13 +28,14 @@ async def create_mcp_server(config: Config) -> FastMCP:
     # Fetch OpenAPI spec
     spec = await fetch_openapi_spec(config.openapi.spec_url)
 
-    # Filter paths if patterns are provided
-    if config.include_patterns or config.exclude_patterns:
-        spec = filter_openapi_paths(
-            spec,
-            config.include_patterns,
-            config.exclude_patterns,
-        )
+    # Always apply filtering (includes GET-only default when no method filtering specified)
+    spec = filter_openapi_paths(
+        spec,
+        config.include_patterns,
+        config.exclude_patterns,
+        config.include_methods,
+        config.exclude_methods,
+    )
 
     # Extract base URL from spec
     if "servers" not in spec or not spec["servers"]:

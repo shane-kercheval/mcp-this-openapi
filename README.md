@@ -13,6 +13,7 @@ A Model Context Protocol (MCP) server that automatically generates tools from Op
 - 🎯 **Path Filtering**: Include/exclude specific API endpoints using regex patterns
 - 🌐 **Flexible Spec Loading**: Supports both JSON and YAML OpenAPI specifications
 - 🔒 **Environment Variables**: Secure credential management with `${VAR_NAME}` expansion
+- 🛡️ **Secure by Default**: Only GET (read-only) operations enabled by default
 
 ## Quick Start with Petstore API
 
@@ -55,8 +56,23 @@ Add this to your Claude Desktop `claude_desktop_config.json`:
 Once configured, you can ask Claude things like:
 
 - "What pet operations are available?"
-- "Get information about pet with ID 1"
+- "Get information about pet with ID 1" 
 - "Show me the pet store inventory"
+
+**🔒 Security Note**: By default, only `GET` (read-only) operations are enabled for safety. To enable write operations, you must explicitly specify them:
+
+```yaml
+server:
+  name: "petstore-demo"
+openapi:
+  spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
+authentication:
+  type: "none"
+include_methods:
+  - GET
+  - POST  # Explicitly enable creating resources
+  - PUT   # Explicitly enable updating resources
+```
 
 ## Configuration Reference
 
@@ -116,9 +132,9 @@ authentication:
   # password: "${API_PASS}"
 ```
 
-### Path Filtering
+### Path and Method Filtering
 
-Control which API endpoints are exposed as tools:
+Control which API endpoints and HTTP methods are exposed as tools:
 
 ```yaml
 server:
@@ -139,6 +155,62 @@ include_patterns:
 exclude_patterns:
   - "^/admin"
   - "^/internal"
+
+# Only allow safe read operations
+include_methods:
+  - GET
+  - HEAD
+
+# Or exclude dangerous operations
+exclude_methods:
+  - DELETE
+  - PUT
+  - PATCH
+```
+
+#### Method Filtering Examples
+
+**🛡️ Default Behavior** (automatic, no configuration needed):
+```yaml
+# GET-only operations are enabled by default for security
+# No method filtering configuration needed for read-only access
+server:
+  name: "safe-api"
+openapi:
+  spec_url: "https://api.example.com/openapi.json"
+```
+
+**Enable Write Operations** (explicit opt-in required):
+```yaml
+include_methods:
+  - GET
+  - POST   # Allow creating resources
+  - PUT    # Allow updating resources
+```
+
+**All Operations** (for full API access):
+```yaml
+include_methods:
+  - GET
+  - POST
+  - PUT
+  - DELETE
+  - PATCH
+```
+
+**Exclude Specific Operations**:
+```yaml
+exclude_methods:
+  - DELETE  # Allow all except delete
+```
+
+**Combined Path and Method Filtering**:
+```yaml
+# Only allow GET operations on user endpoints
+include_patterns:
+  - "^/users"
+include_methods:
+  - GET
 ```
 
 ### Environment Variables
@@ -206,10 +278,9 @@ include_patterns:
   - "^/v1/products"
   - "^/v1/prices"
 
-# Exclude dangerous operations
-exclude_patterns:
-  - "^/v1/.*delete"
-  - "^/v1/charges"
+# Only allow read operations for safety
+include_methods:
+  - GET
 ```
 
 ## License

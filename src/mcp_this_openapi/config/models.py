@@ -35,3 +35,5 @@ class Config(BaseModel):
     authentication: AuthenticationConfig | None = None
     include_patterns: list[str] | None = None
     exclude_patterns: list[str] | None = None
+    include_methods: list[str] | None = None
+    exclude_methods: list[str] | None = None
