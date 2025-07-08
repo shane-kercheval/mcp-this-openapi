@@ -9,6 +9,7 @@ from pathlib import Path
 from mcp_this_openapi.openapi.fetcher import fetch_openapi_spec
 from mcp_this_openapi.openapi.filter import filter_openapi_paths
 from mcp_this_openapi.openapi.auth import create_authenticated_client
+from mcp_this_openapi.openapi.url_utils import extract_base_url
 from mcp_this_openapi.config.models import AuthenticationConfig
 
 
@@ -392,3 +393,78 @@ def test_create_authenticated_client_invalid_type():
 
     with pytest.raises(ValueError, match="Unsupported authentication type"):
         create_authenticated_client(auth_config, "https://api.example.com")
+
+
+def test_extract_base_url_with_servers():
+    """Test extracting base URL when servers field is present."""
+    spec = {
+        "servers": [
+            {"url": "https://api.example.com/v1"},
+            {"url": "https://api.example.com/v2"},
+        ],
+    }
+
+    result = extract_base_url(spec, "https://docs.example.com/openapi.json")
+    assert result == "https://api.example.com/v1"
+
+
+def test_extract_base_url_with_relative_server():
+    """Test extracting base URL when server URL is relative."""
+    spec = {
+        "servers": [
+            {"url": "/api/v1"},
+        ],
+    }
+
+    result = extract_base_url(spec, "https://docs.example.com/openapi.json")
+    assert result == "https://docs.example.com/api/v1"
+
+
+def test_extract_base_url_no_servers():
+    """Test extracting base URL when no servers field exists."""
+    spec = {
+        "openapi": "3.0.0",
+        "info": {"title": "Test API", "version": "1.0.0"},
+    }
+
+    result = extract_base_url(spec, "https://api.example.com/openapi.json")
+    assert result == "https://api.example.com"
+
+
+def test_extract_base_url_empty_servers():
+    """Test extracting base URL when servers field is empty array."""
+    spec = {
+        "servers": [],
+    }
+
+    result = extract_base_url(spec, "https://api.example.com/docs/openapi.json")
+    assert result == "https://api.example.com"
+
+
+def test_extract_base_url_complex_spec_url():
+    """Test extracting base URL from complex spec URL with path."""
+    spec = {
+        "openapi": "3.0.0",
+    }
+
+    result = extract_base_url(
+        spec,
+        "https://my-service-dev.my_server-12345.westus.apps.io/openapi.json",
+    )
+    assert result == "https://my-service-dev.my_server-12345.westus.apps.io"
+
+
+def test_extract_base_url_with_port():
+    """Test extracting base URL that includes port number."""
+    spec = {}
+
+    result = extract_base_url(spec, "https://api.example.com:8080/openapi.json")
+    assert result == "https://api.example.com:8080"
+
+
+def test_extract_base_url_http_scheme():
+    """Test extracting base URL with HTTP scheme."""
+    spec = {}
+
+    result = extract_base_url(spec, "http://api.example.com/openapi.json")
+    assert result == "http://api.example.com"

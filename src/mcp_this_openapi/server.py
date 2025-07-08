@@ -3,13 +3,13 @@
 import sys
 from fastmcp import FastMCP
 import asyncio
-from urllib.parse import urlparse
 
 from .config.models import Config, ServerConfig, OpenAPIConfig, AuthenticationConfig
 from .config.loader import load_config
 from .openapi.fetcher import fetch_openapi_spec
 from .openapi.filter import filter_openapi_paths
 from .openapi.auth import create_authenticated_client
+from .openapi.url_utils import extract_base_url
 
 
 async def create_mcp_server(config: Config) -> FastMCP:
@@ -38,15 +38,7 @@ async def create_mcp_server(config: Config) -> FastMCP:
     )
 
     # Extract base URL from spec
-    if "servers" not in spec or not spec["servers"]:
-        raise ValueError("OpenAPI spec must contain at least one server")
-
-    base_url = spec["servers"][0]["url"]
-
-    # Handle relative URLs by using the spec URL's host
-    if base_url.startswith("/"):
-        parsed_spec_url = urlparse(config.openapi.spec_url)
-        base_url = f"{parsed_spec_url.scheme}://{parsed_spec_url.netloc}{base_url}"
+    base_url = extract_base_url(spec, config.openapi.spec_url)
 
     # Create authenticated client
     client = create_authenticated_client(config.authentication, base_url)
