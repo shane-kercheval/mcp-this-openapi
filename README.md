@@ -1,6 +1,6 @@
 # mcp-this-openapi
 
-[![Tests](https://github.com/shane-kercheval/mcp-this-openai/actions/workflows/tests.yaml/badge.svg)](https://github.com/shane-kercheval/mcp-this-openai/actions/workflows/tests.yaml)
+[![Tests](https://github.com/shane-kercheval/mcp-this-openapi/actions/workflows/tests.yaml/badge.svg)](https://github.com/shane-kercheval/mcp-this-openapi/actions/workflows/tests.yaml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
@@ -43,7 +43,7 @@ Add this to your Claude Desktop `claude_desktop_config.json`:
     "petstore": {
       "command": "uvx",
       "args": [
-        "mcp-mcp_this_openapi",
+        "mcp-this-openapi",
         "--config-path",
         "/path/to/your/petstore-config.yaml"
       ]
@@ -207,43 +207,6 @@ include_patterns:
 exclude_patterns:
   - "^/v1/.*delete"
   - "^/v1/charges"
-```
-
-## Claude Desktop Integration
-
-### macOS Configuration Location
-```
-~/Library/Application Support/Claude/claude_desktop_config.json
-```
-
-### Complete Claude Desktop Configuration Example
-
-```json
-{
-  "mcpServers": {
-    "petstore": {
-      "command": "python",
-      "args": [
-        "-m", 
-        "mcp_this_openapi", 
-        "--config-path", 
-        "/Users/yourusername/configs/petstore.yaml"
-      ]
-    },
-    "github": {
-      "command": "python",
-      "args": [
-        "-m", 
-        "mcp_this_openapi", 
-        "--config-path", 
-        "/Users/yourusername/configs/github.yaml"
-      ],
-      "env": {
-        "GITHUB_TOKEN": "your-github-token-here"
-      }
-    }
-  }
-}
 ```
 
 ## License
