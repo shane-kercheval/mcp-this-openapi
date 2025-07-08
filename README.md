@@ -15,13 +15,45 @@ A Model Context Protocol (MCP) server that automatically generates tools from Op
 - 🔒 **Environment Variables**: Secure credential management with `${VAR_NAME}` expansion
 - 🛡️ **Secure by Default**: Only GET (read-only) operations enabled by default
 
-## Quick Start with Petstore API
+## Quick Start
 
-The easiest way to get started is with the Swagger Petstore demo API:
+### Minimal Usage
 
-### 1. Create Configuration File
+The easiest way to get started is with a simple command line argument:
 
-Create `petstore-config.yaml`:
+**1. Configure Claude Desktop**
+
+Add this to your Claude Desktop `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "petstore": {
+      "command": "uvx",
+      "args": [
+        "mcp-this-openapi",
+        "--openapi-spec-url",
+        "https://petstore3.swagger.io/api/v3/openapi.json"
+      ]
+    }
+  }
+}
+```
+
+**2. Try it in Claude**
+
+Once configured, you can ask Claude things like:
+- "What pet operations are available?"
+- "Get information about pet with ID 1" 
+- "Show me the pet store inventory"
+
+**🔒 Security Note**: By default, only `GET` (read-only) operations are enabled for safety.
+
+### Advanced Usage (Configuration File)
+
+For authentication, filtering, or other advanced features, create a YAML configuration file:
+
+**1. Create `petstore-config.yaml`:**
 
 ```yaml
 server:
@@ -30,11 +62,13 @@ openapi:
   spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
 authentication:
   type: "none"
+include_methods:
+  - GET
+  - POST  # Explicitly enable creating resources
+  - PUT   # Explicitly enable updating resources
 ```
 
-### 2. Configure Claude Desktop
-
-Add this to your Claude Desktop `claude_desktop_config.json`:
+**2. Configure Claude Desktop:**
 
 ```json
 {
@@ -51,32 +85,46 @@ Add this to your Claude Desktop `claude_desktop_config.json`:
 }
 ```
 
-### 3. Try it in Claude
-
-Once configured, you can ask Claude things like:
-
-- "What pet operations are available?"
-- "Get information about pet with ID 1" 
-- "Show me the pet store inventory"
-
-**🔒 Security Note**: By default, only `GET` (read-only) operations are enabled for safety. To enable write operations, you must explicitly specify them:
-
-```yaml
-server:
-  name: "petstore-demo"
-openapi:
-  spec_url: "https://petstore3.swagger.io/api/v3/openapi.json"
-authentication:
-  type: "none"
-include_methods:
-  - GET
-  - POST  # Explicitly enable creating resources
-  - PUT   # Explicitly enable updating resources
-```
-
 ## Configuration Reference
 
-### Basic Configuration
+### CLI Arguments (Minimal Usage)
+
+For simple use cases, you can use CLI arguments instead of a configuration file:
+
+```bash
+# Minimal usage (with default server name)
+mcp-this-openapi --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json
+
+# With custom server name
+mcp-this-openapi \
+  --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json \
+  --server-name "my-petstore"
+```
+
+**Available CLI Arguments:**
+- `--openapi-spec-url URL` - URL to OpenAPI/Swagger specification (required)
+- `--server-name NAME` - Name for the MCP server (optional, defaults to "openapi-server")
+- `--config-path PATH` - Path to YAML configuration file (mutually exclusive with --openapi-spec-url)
+
+**Claude Desktop Example:**
+```json
+{
+  "mcpServers": {
+    "my-api": {
+      "command": "uvx",
+      "args": [
+        "mcp-this-openapi",
+        "--openapi-spec-url", "https://api.example.com/openapi.json",
+        "--server-name", "my-api"
+      ]
+    }
+  }
+}
+```
+
+### YAML Configuration (Advanced Usage)
+
+For authentication, method filtering, and other advanced features, use a YAML configuration file:
 
 ```yaml
 server:
@@ -89,6 +137,18 @@ openapi:
 authentication:
   type: "none"  # Explicit no authentication (same as omitting this section)
 ```
+
+**When to use YAML configuration:**
+- ✅ API requires authentication
+- ✅ Need to filter specific endpoints or methods
+- ✅ Want to use environment variables for credentials
+- ✅ Complex API setup
+
+**When to use CLI arguments:**
+- ✅ Public API with no authentication
+- ✅ Quick testing or prototyping
+- ✅ Simple setup
+- ✅ Default GET-only access is sufficient
 
 ### Authentication Options
 

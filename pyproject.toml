@@ -1,6 +1,6 @@
 [project]
 name = "mcp-this-openapi"
-version = "0.0.3"
+version = "0.0.4"
 description = "MCP Server that creates tools from OpenAPI/Swagger specifications"
 readme = "README.md"
 requires-python = ">=3.11"

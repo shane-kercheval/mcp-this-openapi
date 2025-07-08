@@ -5,7 +5,7 @@ from fastmcp import FastMCP
 import asyncio
 from urllib.parse import urlparse
 
-from .config.models import Config
+from .config.models import Config, ServerConfig, OpenAPIConfig, AuthenticationConfig
 from .config.loader import load_config
 from .openapi.fetcher import fetch_openapi_spec
 from .openapi.filter import filter_openapi_paths
@@ -74,6 +74,40 @@ def run_server(config_path: str) -> None:
     async def _run_server():  # noqa: ANN202
         # Load configuration
         config = load_config(config_path)
+
+        # Log to stderr so it doesn't interfere with MCP protocol
+        print(f"Starting MCP server '{config.server.name}' with OpenAPI spec from {config.openapi.spec_url}", file=sys.stderr)  # noqa: E501
+
+        # Create server
+        server = await create_mcp_server(config)
+
+        print(f"🚀 MCP server '{config.server.name}' is running", file=sys.stderr)
+        return server
+
+    # Run async setup and then start server
+    server = asyncio.run(_run_server())
+    server.run()
+
+
+def run_server_from_args(openapi_spec_url: str, server_name: str) -> None:
+    """
+    Run the MCP server with direct CLI arguments.
+
+    Args:
+        openapi_spec_url: URL to the OpenAPI specification
+        server_name: Name for the MCP server
+
+    Raises:
+        ValueError: If arguments are invalid
+    """
+
+    async def _run_server():  # noqa: ANN202
+        # Create a minimal config from arguments
+        config = Config(
+            server=ServerConfig(name=server_name),
+            openapi=OpenAPIConfig(spec_url=openapi_spec_url),
+            authentication=AuthenticationConfig(type="none"),
+        )
 
         # Log to stderr so it doesn't interfere with MCP protocol
         print(f"Starting MCP server '{config.server.name}' with OpenAPI spec from {config.openapi.spec_url}", file=sys.stderr)  # noqa: E501

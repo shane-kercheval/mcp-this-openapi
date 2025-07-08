@@ -404,6 +404,36 @@ authentication:
         finally:
             os.unlink(temp_config_path)
 
+    async def test_server_with_cli_arguments(self):
+        """Test server with direct CLI arguments (minimal usage)."""
+        server_params = StdioServerParameters(
+            command="python",
+            args=[
+                "-m", "mcp_this_openapi",
+                "--openapi-spec-url", "https://petstore3.swagger.io/api/v3/openapi.json",
+                "--server-name", "petstore-cli",
+            ],
+        )
+
+        async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:  # noqa: E501
+            await session.initialize()
+            tools = await session.list_tools()
+
+            tool_names = [t.name for t in tools.tools]
+
+            # Should have tools generated from the OpenAPI spec
+            assert tools.tools
+            assert any("get" in name.lower() for name in tool_names)
+
+            # Should default to GET-only (read operations)
+            write_operations = [name for name in tool_names
+                              if any(verb in name.lower()
+                                   for verb in ['add', 'create', 'update', 'delete', 'place'])]
+
+            # Should have fewer write operations due to GET-only default
+            assert len(tool_names) >= 1
+            assert len(write_operations) < len(tool_names) // 3
+
 
 @pytest.mark.asyncio
 class TestMCPServerWithRealAPIs:

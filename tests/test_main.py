@@ -188,3 +188,85 @@ class TestFindDefaultConfig:
         with patch('pathlib.Path.exists', return_value=False):
             config_path = find_default_config()
             assert config_path is None
+
+
+class TestCLIArguments:
+    """Test cases for CLI argument handling."""
+
+    def test_main_with_openapi_spec_url_only(self):
+        """Test main function with only openapi-spec-url argument."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json']):
+                main()
+
+                # Check that run_server_from_args was called with correct arguments
+                mock_run_server.assert_called_once_with('https://api.example.com/openapi.json', 'openapi-server')  # noqa: E501
+
+    def test_main_with_openapi_spec_url_and_server_name(self):
+        """Test main function with both openapi-spec-url and server-name arguments."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--server-name', 'my-api']):  # noqa: E501
+                main()
+
+                # Check that run_server_from_args was called with correct arguments
+                mock_run_server.assert_called_once_with('https://api.example.com/openapi.json', 'my-api')  # noqa: E501
+
+    def test_main_with_config_path_and_openapi_spec_url_conflict(self):
+        """Test that config-path and openapi-spec-url are mutually exclusive."""
+        with patch('sys.argv', ['mcp-this-openapi', '--config-path', 'config.yaml', '--openapi-spec-url', 'https://api.example.com/openapi.json']):  # noqa: E501, SIM117
+            with pytest.raises(SystemExit):  # argparse should exit due to mutual exclusion
+                main()
+
+    def test_main_cli_args_with_keyboard_interrupt(self):
+        """Test handling keyboard interrupt with CLI arguments."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.stderr'):
+                # Mock run_server_from_args to raise KeyboardInterrupt
+                mock_run_server.side_effect = KeyboardInterrupt()
+
+                with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json']):  # noqa: SIM117
+                    with patch('sys.exit') as mock_exit:
+                        main()
+
+                        # Should exit with code 0 on keyboard interrupt
+                        mock_exit.assert_called_once_with(0)
+
+    def test_main_cli_args_with_runtime_error(self):
+        """Test handling runtime errors with CLI arguments."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.stderr'):
+                # Mock run_server_from_args to raise a ValueError
+                mock_run_server.side_effect = ValueError("Invalid OpenAPI spec URL")
+
+                with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'invalid-url']):  # noqa: SIM117
+                    with patch('sys.exit') as mock_exit:
+                        main()
+
+                        # Should exit with code 1 on runtime error
+                        mock_exit.assert_called_once_with(1)
+
+    def test_main_no_arguments_with_no_default_config(self):
+        """Test main function with no arguments and no default config."""
+        with patch('mcp_this_openapi.__main__.find_default_config', return_value=None):  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi']):
+                with pytest.raises(SystemExit):  # Should exit when no config found
+                    main()
+
+    def test_main_server_name_without_openapi_spec_url(self):
+        """Test that server-name without openapi-spec-url uses config path."""
+        with patch('mcp_this_openapi.__main__.run_server') as mock_run_server:  # noqa: SIM117
+            with patch('mcp_this_openapi.__main__.find_default_config', return_value='/path/to/default.yaml'):  # noqa: E501
+                with patch('sys.argv', ['mcp-this-openapi', '--server-name', 'my-server']):
+                    main()
+
+                    # Should use config file path since server-name alone isn't enough
+                    mock_run_server.assert_called_once_with('/path/to/default.yaml')
+
+    def test_help_shows_new_options(self):
+        """Test that help message includes the new CLI options."""
+        with patch('sys.argv', ['mcp-this-openapi', '--help']):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+
+            # Should exit with code 0 for help
+            assert exc_info.value.code == 0

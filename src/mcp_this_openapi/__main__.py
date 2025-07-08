@@ -10,7 +10,7 @@ import sys
 import argparse
 import pathlib
 
-from .server import run_server
+from .server import run_server, run_server_from_args
 
 
 def find_default_config() -> str | None:
@@ -37,26 +37,57 @@ def find_default_config() -> str | None:
 def main() -> None:
     """Run the MCP server with the specified configuration."""
     parser = argparse.ArgumentParser(description="OpenAPI/Swagger MCP Server")
-    parser.add_argument(
+
+    # Create mutually exclusive group for config methods
+    config_group = parser.add_mutually_exclusive_group(required=False)
+
+    config_group.add_argument(
         "--config-path",
         "--config_path",
         dest="config_path",
         type=str,
         help="Path to YAML configuration file",
     )
+
+    config_group.add_argument(
+        "--openapi-spec-url",
+        dest="openapi_spec_url",
+        type=str,
+        help="URL to OpenAPI/Swagger specification (JSON or YAML)",
+    )
+
+    parser.add_argument(
+        "--server-name",
+        dest="server_name",
+        type=str,
+        help="Name for the MCP server (optional, defaults to 'openapi-server')",
+    )
+
     args = parser.parse_args()
 
-    # Set config path from argument or look for default config
-    config_path = args.config_path
+    # Handle direct CLI arguments
+    if args.openapi_spec_url:
+        server_name = args.server_name or "openapi-server"
+        try:
+            run_server_from_args(args.openapi_spec_url, server_name)
+        except KeyboardInterrupt:
+            print("\n🛑 Server stopped by user", file=sys.stderr)
+            sys.exit(0)
+        except Exception as e:
+            print(f"❌ Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        return
 
+    # Handle config file
+    config_path = args.config_path
     if not config_path:
         config_path = find_default_config()
 
     if not config_path:
         print("Error: No configuration found. Please provide one using:")
-        print("  1. --config-path argument (YAML file)")
-        print("  2. Place a config in ~/.config/mcp-this-openapi/config.yaml")
-        print("  3. Use the example petstore config in examples/configs/")
+        print("  1. --openapi-spec-url URL [--server-name NAME]")
+        print("  2. --config-path PATH (YAML file)")
+        print("  3. Place a config in ~/.config/mcp-this-openapi/config.yaml")
         sys.exit(1)
 
     try:
