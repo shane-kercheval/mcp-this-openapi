@@ -11,6 +11,7 @@ def filter_openapi_paths(  # noqa: PLR0912
     exclude_patterns: list[str] | None = None,
     include_methods: list[str] | None = None,
     exclude_methods: list[str] | None = None,
+    include_deprecated: bool = False,
 ) -> dict[str, Any]:
     """
     Filter OpenAPI specification paths based on include/exclude patterns and HTTP methods.
@@ -21,6 +22,7 @@ def filter_openapi_paths(  # noqa: PLR0912
         exclude_patterns: List of regex patterns for paths to exclude
         include_methods: List of HTTP methods to include (e.g., ["GET", "POST"])
         exclude_methods: List of HTTP methods to exclude (e.g., ["DELETE", "PUT"])
+        include_deprecated: Whether to include deprecated endpoints (default: False)
 
     Returns:
         Modified OpenAPI specification with filtered paths and methods
@@ -47,7 +49,6 @@ def filter_openapi_paths(  # noqa: PLR0912
     for path, path_spec in original_paths.items():
         # Apply path-level filtering first
         should_include_path = True
-
         # Apply include patterns - if specified, path must match at least one
         if include_patterns:
             should_include_path = any(
@@ -61,6 +62,12 @@ def filter_openapi_paths(  # noqa: PLR0912
             )
 
         if should_include_path:
+            # Check if path is deprecated (applies to all methods)
+            path_deprecated = path_spec.get('deprecated', False)
+            if path_deprecated and not include_deprecated:
+                # Skip this entire path if it's deprecated and we're not including deprecated
+                continue
+
             # Filter methods within this path
             filtered_path_spec = {}
 
@@ -82,6 +89,15 @@ def filter_openapi_paths(  # noqa: PLR0912
                 # Apply exclude methods - if method is in exclude list, remove it
                 if should_include_method and exclude_methods_upper:
                     should_include_method = method_upper not in exclude_methods_upper
+
+                # Check if operation is deprecated
+                if should_include_method and not include_deprecated:
+                    # Here we know we should include the method. However, if we are not including
+                    # deprecated methods (default behavior) and the method is deprecated,
+                    # we should not include it.
+                    operation_deprecated = method_spec.get('deprecated', False)
+                    if operation_deprecated:
+                        should_include_method = False
 
                 if should_include_method:
                     filtered_path_spec[method] = method_spec

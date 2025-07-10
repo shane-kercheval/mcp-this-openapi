@@ -63,13 +63,20 @@ def main() -> None:
         help="Name for the MCP server (optional, defaults to 'openapi-server')",
     )
 
+    parser.add_argument(
+        "--include-deprecated",
+        dest="include_deprecated",
+        action="store_true",
+        help="Include deprecated endpoints (excluded by default)",
+    )
+
     args = parser.parse_args()
 
     # Handle direct CLI arguments
     if args.openapi_spec_url:
         server_name = args.server_name or "openapi-server"
         try:
-            run_server_from_args(args.openapi_spec_url, server_name)
+            run_server_from_args(args.openapi_spec_url, server_name, args.include_deprecated)
         except KeyboardInterrupt:
             print("\n🛑 Server stopped by user", file=sys.stderr)
             sys.exit(0)

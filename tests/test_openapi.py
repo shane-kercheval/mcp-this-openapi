@@ -29,6 +29,14 @@ def multi_method_spec():
         return json.load(f)
 
 
+@pytest.fixture
+def deprecated_spec():
+    """Load the deprecated OpenAPI spec fixture."""
+    fixtures_dir = Path(__file__).parent / "fixtures" / "openapi_specs"
+    with open(fixtures_dir / "deprecated.json") as f:
+        return json.load(f)
+
+
 @pytest.mark.asyncio
 async def test_fetch_openapi_spec_json():
     """Test fetching OpenAPI spec as JSON."""
@@ -468,3 +476,153 @@ def test_extract_base_url_http_scheme():
 
     result = extract_base_url(spec, "http://api.example.com/openapi.json")
     assert result == "http://api.example.com"
+
+
+# Deprecated endpoint filtering tests
+def test_filter_deprecated_path_level_excluded_by_default(deprecated_spec):  # noqa: ANN001
+    """Test that path-level deprecated endpoints are excluded by default."""
+    result = filter_openapi_paths(deprecated_spec)
+
+    # Path-level deprecated endpoint should be excluded
+    assert "/legacy/endpoint" not in result["paths"]
+
+    # Active endpoints should be included
+    assert "/active/endpoint" in result["paths"]
+    assert "/mixed/endpoint" in result["paths"]
+
+    # Mixed endpoint should only have non-deprecated methods
+    assert "get" in result["paths"]["/mixed/endpoint"]
+    assert "post" not in result["paths"]["/mixed/endpoint"]  # deprecated
+    assert "put" not in result["paths"]["/mixed/endpoint"]  # excluded by GET-only default
+    assert "delete" not in result["paths"]["/mixed/endpoint"]  # deprecated
+
+
+def test_filter_deprecated_path_level_included_with_flag(deprecated_spec):  # noqa: ANN001
+    """Test that path-level deprecated endpoints are included when flag is set."""
+    result = filter_openapi_paths(deprecated_spec, include_deprecated=True)
+
+    # Path-level deprecated endpoint should be included
+    assert "/legacy/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/legacy/endpoint"]
+    assert "post" not in result["paths"]["/legacy/endpoint"]  # excluded by GET-only default
+
+    # All other endpoints should still be included
+    assert "/active/endpoint" in result["paths"]
+    assert "/mixed/endpoint" in result["paths"]
+
+
+def test_filter_deprecated_operation_level_excluded_by_default(deprecated_spec):  # noqa: ANN001
+    """Test that operation-level deprecated endpoints are excluded by default."""
+    result = filter_openapi_paths(deprecated_spec, include_methods=["GET", "POST", "PUT", "DELETE"])  # noqa: E501
+
+    # Active endpoints should be included
+    assert "/active/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/active/endpoint"]
+    assert "post" in result["paths"]["/active/endpoint"]
+
+    # Mixed endpoint should only have non-deprecated methods
+    assert "/mixed/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/mixed/endpoint"]
+    assert "post" not in result["paths"]["/mixed/endpoint"]  # deprecated
+    assert "put" in result["paths"]["/mixed/endpoint"]
+    assert "delete" not in result["paths"]["/mixed/endpoint"]  # deprecated
+
+    # Path with all operations deprecated should be excluded entirely
+    assert "/all-deprecated/endpoint" not in result["paths"]
+
+
+def test_filter_deprecated_operation_level_included_with_flag(deprecated_spec):  # noqa: ANN001
+    """Test that operation-level deprecated endpoints are included when flag is set."""
+    result = filter_openapi_paths(
+        deprecated_spec,
+        include_methods=["GET", "POST", "PUT", "DELETE"],
+        include_deprecated=True,
+    )
+
+    # All endpoints and operations should be included
+    assert "/mixed/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/mixed/endpoint"]
+    assert "post" in result["paths"]["/mixed/endpoint"]  # deprecated but included
+    assert "put" in result["paths"]["/mixed/endpoint"]
+    assert "delete" in result["paths"]["/mixed/endpoint"]  # deprecated but included
+
+    # Path with all operations deprecated should now be included
+    assert "/all-deprecated/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/all-deprecated/endpoint"]
+    assert "post" in result["paths"]["/all-deprecated/endpoint"]
+
+
+def test_filter_deprecated_path_precedence_over_operation(deprecated_spec):  # noqa: ANN001
+    """Test that path-level deprecation takes precedence over operation-level."""
+    # Add a test case where path is deprecated but operation is not
+    test_spec = deprecated_spec.copy()
+    test_spec["paths"]["/legacy/endpoint"]["get"]["deprecated"] = False
+
+    result = filter_openapi_paths(test_spec, include_methods=["GET", "POST"])
+
+    # Even though GET operation is not deprecated, the path-level deprecation takes precedence
+    assert "/legacy/endpoint" not in result["paths"]
+
+
+def test_filter_deprecated_with_path_patterns(deprecated_spec):  # noqa: ANN001
+    """Test deprecated filtering combined with path patterns."""
+    result = filter_openapi_paths(
+        deprecated_spec,
+        include_patterns=["^/mixed", "^/legacy"],
+        include_methods=["GET", "POST"],
+    )
+
+    # Legacy endpoint excluded due to deprecation
+    assert "/legacy/endpoint" not in result["paths"]
+
+    # Mixed endpoint included but only non-deprecated operations
+    assert "/mixed/endpoint" in result["paths"]
+    assert "get" in result["paths"]["/mixed/endpoint"]
+    assert "post" not in result["paths"]["/mixed/endpoint"]  # deprecated
+
+    # Active endpoint excluded due to path pattern
+    assert "/active/endpoint" not in result["paths"]
+
+
+def test_filter_deprecated_preserves_non_method_properties(deprecated_spec):  # noqa: ANN001
+    """Test that filtering preserves non-method properties even with deprecation."""
+    # Add some non-method properties
+    test_spec = deprecated_spec.copy()
+    test_spec["paths"]["/mixed/endpoint"]["summary"] = "Mixed endpoint"
+    test_spec["paths"]["/mixed/endpoint"]["description"] = "Has deprecated operations"
+
+    result = filter_openapi_paths(test_spec)
+
+    # Non-method properties should be preserved
+    assert result["paths"]["/mixed/endpoint"]["summary"] == "Mixed endpoint"
+    assert result["paths"]["/mixed/endpoint"]["description"] == "Has deprecated operations"
+
+
+def test_filter_deprecated_cli_and_config_behavior():
+    """Test the behavior matches CLI and config defaults."""
+    # Create a simple spec with one deprecated endpoint
+    spec = {
+        "openapi": "3.0.0",
+        "info": {"title": "Test", "version": "1.0.0"},
+        "paths": {
+            "/active": {
+                "get": {"responses": {"200": {"description": "OK"}}},
+            },
+            "/deprecated": {
+                "get": {
+                    "deprecated": True,
+                    "responses": {"200": {"description": "OK"}},
+                },
+            },
+        },
+    }
+
+    # Default behavior (include_deprecated=False)
+    result = filter_openapi_paths(spec)
+    assert "/active" in result["paths"]
+    assert "/deprecated" not in result["paths"]
+
+    # With flag enabled (include_deprecated=True)
+    result = filter_openapi_paths(spec, include_deprecated=True)
+    assert "/active" in result["paths"]
+    assert "/deprecated" in result["paths"]

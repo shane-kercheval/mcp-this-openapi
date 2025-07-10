@@ -37,3 +37,4 @@ class Config(BaseModel):
     exclude_patterns: list[str] | None = None
     include_methods: list[str] | None = None
     exclude_methods: list[str] | None = None
+    include_deprecated: bool = False

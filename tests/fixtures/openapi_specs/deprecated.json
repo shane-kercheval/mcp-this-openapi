@@ -1,0 +1,107 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Deprecated Test API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com"
+    }
+  ],
+  "paths": {
+    "/legacy/endpoint": {
+      "deprecated": true,
+      "get": {
+        "summary": "Legacy endpoint (path-level deprecated)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "summary": "Legacy endpoint POST (path-level deprecated)",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mixed/endpoint": {
+      "get": {
+        "summary": "Active GET endpoint",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "deprecated": true,
+        "summary": "Deprecated POST endpoint",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "put": {
+        "summary": "Active PUT endpoint",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "deprecated": true,
+        "summary": "Deprecated DELETE endpoint",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/active/endpoint": {
+      "get": {
+        "summary": "Active endpoint",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "summary": "Active endpoint POST",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/all-deprecated/endpoint": {
+      "get": {
+        "deprecated": true,
+        "summary": "All methods deprecated individually",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "deprecated": true,
+        "summary": "All methods deprecated individually POST",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}

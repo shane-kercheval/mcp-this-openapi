@@ -104,6 +104,7 @@ mcp-this-openapi \
 **Available CLI Arguments:**
 - `--openapi-spec-url URL` - URL to OpenAPI/Swagger specification (required)
 - `--server-name NAME` - Name for the MCP server (optional, defaults to "openapi-server")
+- `--include-deprecated` - Include deprecated endpoints (excluded by default)
 - `--config-path PATH` - Path to YAML configuration file (mutually exclusive with --openapi-spec-url)
 
 **Claude Desktop Example:**
@@ -271,6 +272,13 @@ include_patterns:
   - "^/users"
 include_methods:
   - GET
+```
+
+**Deprecated Endpoints**:
+```yaml
+# By default, deprecated endpoints are excluded
+# To include them, add:
+include_deprecated: true
 ```
 
 ### Environment Variables

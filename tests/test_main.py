@@ -200,7 +200,11 @@ class TestCLIArguments:
                 main()
 
                 # Check that run_server_from_args was called with correct arguments
-                mock_run_server.assert_called_once_with('https://api.example.com/openapi.json', 'openapi-server')  # noqa: E501
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',  # server spec URL
+                    'openapi-server',  # default server name
+                    False,  # include_deprecated
+                )
 
     def test_main_with_openapi_spec_url_and_server_name(self):
         """Test main function with both openapi-spec-url and server-name arguments."""
@@ -209,7 +213,11 @@ class TestCLIArguments:
                 main()
 
                 # Check that run_server_from_args was called with correct arguments
-                mock_run_server.assert_called_once_with('https://api.example.com/openapi.json', 'my-api')  # noqa: E501
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',  # server spec URL
+                    'my-api',  # custom server name
+                    False,  # include_deprecated
+                )
 
     def test_main_with_config_path_and_openapi_spec_url_conflict(self):
         """Test that config-path and openapi-spec-url are mutually exclusive."""
@@ -244,6 +252,19 @@ class TestCLIArguments:
 
                         # Should exit with code 1 on runtime error
                         mock_exit.assert_called_once_with(1)
+
+    def test_main_with_include_deprecated_flag(self):
+        """Test main function with include-deprecated flag."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-deprecated']):  # noqa: E501
+                main()
+
+                # Check that run_server_from_args was called with include_deprecated=True
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',  # server spec URL
+                    'openapi-server',  # default server name
+                    True,  # include_deprecated
+                )
 
     def test_main_no_arguments_with_no_default_config(self):
         """Test main function with no arguments and no default config."""

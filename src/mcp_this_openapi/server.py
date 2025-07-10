@@ -35,6 +35,7 @@ async def create_mcp_server(config: Config) -> FastMCP:
         config.exclude_patterns,
         config.include_methods,
         config.exclude_methods,
+        config.include_deprecated,
     )
 
     # Extract base URL from spec
@@ -81,13 +82,18 @@ def run_server(config_path: str) -> None:
     server.run()
 
 
-def run_server_from_args(openapi_spec_url: str, server_name: str) -> None:
+def run_server_from_args(
+        openapi_spec_url: str,
+        server_name: str,
+        include_deprecated: bool = False,
+    ) -> None:
     """
     Run the MCP server with direct CLI arguments.
 
     Args:
         openapi_spec_url: URL to the OpenAPI specification
         server_name: Name for the MCP server
+        include_deprecated: Whether to include deprecated endpoints
 
     Raises:
         ValueError: If arguments are invalid
@@ -99,6 +105,7 @@ def run_server_from_args(openapi_spec_url: str, server_name: str) -> None:
             server=ServerConfig(name=server_name),
             openapi=OpenAPIConfig(spec_url=openapi_spec_url),
             authentication=AuthenticationConfig(type="none"),
+            include_deprecated=include_deprecated,
         )
 
         # Log to stderr so it doesn't interfere with MCP protocol
