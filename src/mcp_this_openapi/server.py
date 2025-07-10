@@ -10,6 +10,8 @@ from .openapi.fetcher import fetch_openapi_spec
 from .openapi.filter import filter_openapi_paths
 from .openapi.auth import create_authenticated_client
 from .openapi.url_utils import extract_base_url
+from .openapi.tool_naming import generate_mcp_names_from_spec
+from .openapi.schema_fix import create_schema_fixing_component_fn
 
 
 async def create_mcp_server(config: Config) -> FastMCP:
@@ -44,11 +46,23 @@ async def create_mcp_server(config: Config) -> FastMCP:
     # Create authenticated client
     client = create_authenticated_client(config.authentication, base_url)
 
+    # Generate tool names based on strategy
+    mcp_names = None
+    if config.tool_naming == "auto":
+        mcp_names = generate_mcp_names_from_spec(spec, use_operation_id=False)
+
+    # Create schema fixing component function if needed
+    mcp_component_fn = None
+    if config.disable_schema_validation:
+        mcp_component_fn = create_schema_fixing_component_fn(disable_validation=True)
+
     # Create FastMCP server
     return FastMCP.from_openapi(
         openapi_spec=spec,
         client=client,
         name=config.server.name,
+        mcp_names=mcp_names,
+        mcp_component_fn=mcp_component_fn,
     )
 
 
@@ -86,6 +100,8 @@ def run_server_from_args(
         openapi_spec_url: str,
         server_name: str,
         include_deprecated: bool = False,
+        tool_naming: str = "default",
+        disable_schema_validation: bool = False,
     ) -> None:
     """
     Run the MCP server with direct CLI arguments.
@@ -94,6 +110,8 @@ def run_server_from_args(
         openapi_spec_url: URL to the OpenAPI specification
         server_name: Name for the MCP server
         include_deprecated: Whether to include deprecated endpoints
+        tool_naming: Tool naming strategy
+        disable_schema_validation: Whether to disable schema validation
 
     Raises:
         ValueError: If arguments are invalid
@@ -106,6 +124,8 @@ def run_server_from_args(
             openapi=OpenAPIConfig(spec_url=openapi_spec_url),
             authentication=AuthenticationConfig(type="none"),
             include_deprecated=include_deprecated,
+            tool_naming=tool_naming,
+            disable_schema_validation=disable_schema_validation,
         )
 
         # Log to stderr so it doesn't interfere with MCP protocol

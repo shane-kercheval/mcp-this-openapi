@@ -5,3 +5,5 @@ openapi:
 authentication:
   type: "none"
 # include_deprecated: false  # Default: exclude deprecated endpoints
+# tool_naming: "default"  # Default: use operationId as-is. Alternative: "auto" for clean names with smart clash detection
+# disable_schema_validation: false  # Default: enable schema validation. Set true to disable for APIs with broken schemas

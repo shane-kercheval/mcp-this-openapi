@@ -204,6 +204,8 @@ class TestCLIArguments:
                     'https://api.example.com/openapi.json',  # server spec URL
                     'openapi-server',  # default server name
                     False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
                 )
 
     def test_main_with_openapi_spec_url_and_server_name(self):
@@ -217,6 +219,8 @@ class TestCLIArguments:
                     'https://api.example.com/openapi.json',  # server spec URL
                     'my-api',  # custom server name
                     False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
                 )
 
     def test_main_with_config_path_and_openapi_spec_url_conflict(self):
@@ -264,6 +268,23 @@ class TestCLIArguments:
                     'https://api.example.com/openapi.json',  # server spec URL
                     'openapi-server',  # default server name
                     True,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                )
+
+    def test_main_with_disable_schema_validation_flag(self):
+        """Test main function with disable-schema-validation flag."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--disable-schema-validation']):  # noqa: E501
+                main()
+
+                # Check that run_server_from_args was called with disable_schema_validation=True
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',  # server spec URL
+                    'openapi-server',  # default server name
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    True,  # disable_schema_validation
                 )
 
     def test_main_no_arguments_with_no_default_config(self):

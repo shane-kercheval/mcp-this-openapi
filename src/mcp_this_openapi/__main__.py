@@ -70,13 +70,34 @@ def main() -> None:
         help="Include deprecated endpoints (excluded by default)",
     )
 
+    parser.add_argument(
+        "--tool-naming",
+        dest="tool_naming",
+        choices=["default", "auto"],
+        default="default",
+        help="Tool naming strategy: 'default' uses OpenAPI operationId as-is (default), 'auto' generates clean names from HTTP method + path with smart clash detection",  # noqa: E501
+    )
+
+    parser.add_argument(
+        "--disable-schema-validation",
+        dest="disable_schema_validation",
+        action="store_true",
+        help="Disable output schema validation for API responses (useful for APIs with broken schema references)",  # noqa: E501
+    )
+
     args = parser.parse_args()
 
     # Handle direct CLI arguments
     if args.openapi_spec_url:
         server_name = args.server_name or "openapi-server"
         try:
-            run_server_from_args(args.openapi_spec_url, server_name, args.include_deprecated)
+            run_server_from_args(
+                args.openapi_spec_url,
+                server_name,
+                args.include_deprecated,
+                args.tool_naming,
+                args.disable_schema_validation,
+            )
         except KeyboardInterrupt:
             print("\n🛑 Server stopped by user", file=sys.stderr)
             sys.exit(0)

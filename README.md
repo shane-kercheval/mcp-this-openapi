@@ -105,6 +105,8 @@ mcp-this-openapi \
 - `--openapi-spec-url URL` - URL to OpenAPI/Swagger specification (required)
 - `--server-name NAME` - Name for the MCP server (optional, defaults to "openapi-server")
 - `--include-deprecated` - Include deprecated endpoints (excluded by default)
+- `--tool-naming {default,auto}` - Tool naming strategy (default: "default")
+- `--disable-schema-validation` - Disable API response schema validation (useful for APIs with broken schemas)
 - `--config-path PATH` - Path to YAML configuration file (mutually exclusive with --openapi-spec-url)
 
 **Claude Desktop Example:**
@@ -279,6 +281,25 @@ include_methods:
 # By default, deprecated endpoints are excluded
 # To include them, add:
 include_deprecated: true
+```
+
+**Tool Naming Strategy**:
+```yaml
+# Default: use operationId from OpenAPI spec as-is
+tool_naming: "default"  # Tools named like "getUserById", "createUser"
+
+# Auto: generate clean names with smart clash detection
+tool_naming: "auto"  # Tools named like "get_users", "post_users"
+                     # Automatically handles version clashes: "v1_get_users", "v2_get_users"
+```
+
+**Schema Validation**:
+```yaml
+# Default: enable schema validation for API responses
+disable_schema_validation: false
+
+# Disable if you get "PointerToNowhere" or other schema reference errors
+disable_schema_validation: true
 ```
 
 ### Environment Variables

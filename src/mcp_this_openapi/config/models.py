@@ -1,7 +1,7 @@
 """Configuration models for mcp-this-openapi."""
 
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ServerConfig(BaseModel):
@@ -38,3 +38,11 @@ class Config(BaseModel):
     include_methods: list[str] | None = None
     exclude_methods: list[str] | None = None
     include_deprecated: bool = False
+    tool_naming: Literal["default", "auto"] = Field(
+        default="default",
+        description="Strategy for generating tool names: 'default' uses OpenAPI operationId as-is, 'auto' generates clean names from HTTP method + path with smart clash detection",  # noqa: E501
+    )
+    disable_schema_validation: bool = Field(
+        default=False,
+        description="Disable output schema validation for API responses (useful for APIs with broken schema references)",  # noqa: E501
+    )
