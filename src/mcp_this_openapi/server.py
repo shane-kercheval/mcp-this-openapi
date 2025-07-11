@@ -102,6 +102,8 @@ def run_server_from_args(
         include_deprecated: bool = False,
         tool_naming: str = "default",
         disable_schema_validation: bool = False,
+        include_methods: list[str] | None = None,
+        exclude_methods: list[str] | None = None,
     ) -> None:
     """
     Run the MCP server with direct CLI arguments.
@@ -112,6 +114,8 @@ def run_server_from_args(
         include_deprecated: Whether to include deprecated endpoints
         tool_naming: Tool naming strategy
         disable_schema_validation: Whether to disable schema validation
+        include_methods: List of HTTP methods to include
+        exclude_methods: List of HTTP methods to exclude
 
     Raises:
         ValueError: If arguments are invalid
@@ -126,6 +130,8 @@ def run_server_from_args(
             include_deprecated=include_deprecated,
             tool_naming=tool_naming,
             disable_schema_validation=disable_schema_validation,
+            include_methods=include_methods,
+            exclude_methods=exclude_methods,
         )
 
         # Log to stderr so it doesn't interfere with MCP protocol

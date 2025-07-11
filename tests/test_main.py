@@ -6,7 +6,7 @@ import os
 from unittest.mock import patch
 from pathlib import Path
 
-from mcp_this_openapi.__main__ import main, find_default_config
+from mcp_this_openapi.__main__ import main, find_default_config, parse_hybrid_list
 
 
 class TestMain:
@@ -206,6 +206,8 @@ class TestCLIArguments:
                     False,  # include_deprecated
                     'default',  # tool_naming
                     False,  # disable_schema_validation
+                    None,  # include_methods
+                    None,  # exclude_methods
                 )
 
     def test_main_with_openapi_spec_url_and_server_name(self):
@@ -221,6 +223,8 @@ class TestCLIArguments:
                     False,  # include_deprecated
                     'default',  # tool_naming
                     False,  # disable_schema_validation
+                    None,  # include_methods
+                    None,  # exclude_methods
                 )
 
     def test_main_with_config_path_and_openapi_spec_url_conflict(self):
@@ -270,6 +274,8 @@ class TestCLIArguments:
                     True,  # include_deprecated
                     'default',  # tool_naming
                     False,  # disable_schema_validation
+                    None,  # include_methods
+                    None,  # exclude_methods
                 )
 
     def test_main_with_disable_schema_validation_flag(self):
@@ -285,6 +291,8 @@ class TestCLIArguments:
                     False,  # include_deprecated
                     'default',  # tool_naming
                     True,  # disable_schema_validation
+                    None,  # include_methods
+                    None,  # exclude_methods
                 )
 
     def test_main_no_arguments_with_no_default_config(self):
@@ -312,3 +320,214 @@ class TestCLIArguments:
 
             # Should exit with code 0 for help
             assert exc_info.value.code == 0
+
+
+class TestParseHybridList:
+    """Test cases for the parse_hybrid_list function."""
+
+    def test_parse_hybrid_list_none_input(self):
+        """Test parse_hybrid_list with None input."""
+        result = parse_hybrid_list(None)
+        assert result is None
+
+    def test_parse_hybrid_list_empty_list(self):
+        """Test parse_hybrid_list with empty list."""
+        result = parse_hybrid_list([])
+        assert result is None
+
+    def test_parse_hybrid_list_single_item(self):
+        """Test parse_hybrid_list with single item."""
+        result = parse_hybrid_list(['GET'])
+        assert result == ['GET']
+
+    def test_parse_hybrid_list_multiple_items(self):
+        """Test parse_hybrid_list with multiple separate items."""
+        result = parse_hybrid_list(['GET', 'POST', 'PUT'])
+        assert result == ['GET', 'POST', 'PUT']
+
+    def test_parse_hybrid_list_comma_separated(self):
+        """Test parse_hybrid_list with comma-separated values."""
+        result = parse_hybrid_list(['GET,POST,PUT'])
+        assert result == ['GET', 'POST', 'PUT']
+
+    def test_parse_hybrid_list_mixed_format(self):
+        """Test parse_hybrid_list with mixed comma-separated and separate items."""
+        result = parse_hybrid_list(['GET,POST', 'PUT', 'DELETE,PATCH'])
+        assert result == ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+
+    def test_parse_hybrid_list_whitespace_handling(self):
+        """Test parse_hybrid_list handles whitespace correctly."""
+        result = parse_hybrid_list(['GET, POST', ' PUT ', 'DELETE,PATCH '])
+        assert result == ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+
+    def test_parse_hybrid_list_case_normalization(self):
+        """Test parse_hybrid_list normalizes case to uppercase."""
+        result = parse_hybrid_list(['get,post', 'Put', 'delete'])
+        assert result == ['GET', 'POST', 'PUT', 'DELETE']
+
+    def test_parse_hybrid_list_empty_values_filtered(self):
+        """Test parse_hybrid_list filters out empty values."""
+        result = parse_hybrid_list(['GET,', ',POST', 'PUT,'])
+        assert result == ['GET', 'POST', 'PUT']
+
+    def test_parse_hybrid_list_multiple_commas(self):
+        """Test parse_hybrid_list handles multiple consecutive commas."""
+        result = parse_hybrid_list(['GET,,POST', 'PUT,,,DELETE'])
+        assert result == ['GET', 'POST', 'PUT', 'DELETE']
+
+
+class TestCLIMethodArguments:
+    """Test cases for CLI method arguments (include-methods and exclude-methods)."""
+
+    def test_main_with_include_methods_single(self):
+        """Test main function with single include-methods argument."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-methods', 'GET']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET'],  # include_methods
+                    None,  # exclude_methods
+                )
+
+    def test_main_with_include_methods_comma_separated(self):
+        """Test main function with comma-separated include-methods."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-methods', 'GET,POST,PUT']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET', 'POST', 'PUT'],  # include_methods
+                    None,  # exclude_methods
+                )
+
+    def test_main_with_include_methods_repeated_flags(self):
+        """Test main function with repeated include-methods flags."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-methods', 'GET', '--include-methods', 'POST']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET', 'POST'],  # include_methods
+                    None,  # exclude_methods
+                )
+
+    def test_main_with_exclude_methods_single(self):
+        """Test main function with single exclude-methods argument."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--exclude-methods', 'DELETE']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    None,  # include_methods
+                    ['DELETE'],  # exclude_methods
+                )
+
+    def test_main_with_exclude_methods_comma_separated(self):
+        """Test main function with comma-separated exclude-methods."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--exclude-methods', 'DELETE,PATCH']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    None,  # include_methods
+                    ['DELETE', 'PATCH'],  # exclude_methods
+                )
+
+    def test_main_with_both_include_and_exclude_methods(self):
+        """Test main function with both include and exclude methods."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-methods', 'GET,POST', '--exclude-methods', 'DELETE']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET', 'POST'],  # include_methods
+                    ['DELETE'],  # exclude_methods
+                )
+
+    def test_main_with_mixed_method_format(self):
+        """Test main function with mixed format method arguments."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--include-methods', 'GET,POST', '--include-methods', 'PUT', '--exclude-methods', 'DELETE,PATCH']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'default',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET', 'POST', 'PUT'],  # include_methods
+                    ['DELETE', 'PATCH'],  # exclude_methods
+                )
+
+    def test_main_with_tool_naming_auto_and_methods(self):
+        """Test main function with tool-naming auto and method filters."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', ['mcp-this-openapi', '--openapi-spec-url', 'https://api.example.com/openapi.json', '--tool-naming', 'auto', '--include-methods', 'GET,POST']):  # noqa: E501
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'openapi-server',
+                    False,  # include_deprecated
+                    'auto',  # tool_naming
+                    False,  # disable_schema_validation
+                    ['GET', 'POST'],  # include_methods
+                    None,  # exclude_methods
+                )
+
+    def test_main_with_all_cli_options(self):
+        """Test main function with all CLI options combined."""
+        with patch('mcp_this_openapi.__main__.run_server_from_args') as mock_run_server:  # noqa: SIM117
+            with patch('sys.argv', [
+                'mcp-this-openapi',
+                '--openapi-spec-url', 'https://api.example.com/openapi.json',
+                '--server-name', 'my-api',
+                '--include-deprecated',
+                '--tool-naming', 'auto',
+                '--disable-schema-validation',
+                '--include-methods', 'GET,POST',
+                '--exclude-methods', 'DELETE',
+            ]):
+                main()
+
+                mock_run_server.assert_called_once_with(
+                    'https://api.example.com/openapi.json',
+                    'my-api',
+                    True,  # include_deprecated
+                    'auto',  # tool_naming
+                    True,  # disable_schema_validation
+                    ['GET', 'POST'],  # include_methods
+                    ['DELETE'],  # exclude_methods
+                )

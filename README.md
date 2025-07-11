@@ -99,6 +99,28 @@ mcp-this-openapi --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.
 mcp-this-openapi \
   --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json \
   --server-name "my-petstore"
+
+# With method filtering (comma-separated)
+mcp-this-openapi \
+  --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json \
+  --include-methods GET,POST,PUT
+
+# With method filtering (repeated flags)
+mcp-this-openapi \
+  --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json \
+  --include-methods GET \
+  --include-methods POST \
+  --exclude-methods DELETE
+
+# All CLI options
+mcp-this-openapi \
+  --openapi-spec-url https://petstore3.swagger.io/api/v3/openapi.json \
+  --server-name "my-petstore" \
+  --tool-naming auto \
+  --include-deprecated \
+  --include-methods GET,POST,PUT \
+  --exclude-methods DELETE \
+  --disable-schema-validation
 ```
 
 **Available CLI Arguments:**
@@ -107,9 +129,30 @@ mcp-this-openapi \
 - `--include-deprecated` - Include deprecated endpoints (excluded by default)
 - `--tool-naming {default,auto}` - Tool naming strategy (default: "default")
 - `--disable-schema-validation` - Disable API response schema validation (useful for APIs with broken schemas)
+- `--include-methods METHODS` - HTTP methods to include (repeatable or comma-separated)
+- `--exclude-methods METHODS` - HTTP methods to exclude (repeatable or comma-separated)
 - `--config-path PATH` - Path to YAML configuration file (mutually exclusive with --openapi-spec-url)
 
-**Claude Desktop Example:**
+**Method Filtering Syntax:**
+
+The `--include-methods` and `--exclude-methods` arguments support flexible syntax:
+
+```bash
+# Comma-separated (concise)
+--include-methods GET,POST,PUT
+
+# Repeated flags (explicit)
+--include-methods GET --include-methods POST --include-methods PUT
+
+# Mixed (both work together)
+--include-methods GET,POST --include-methods PUT
+```
+
+Both approaches can be used interchangeably and will be combined. Values are case-insensitive and whitespace is ignored.
+
+**Claude Desktop Examples:**
+
+*Basic usage:*
 ```json
 {
   "mcpServers": {
@@ -119,6 +162,43 @@ mcp-this-openapi \
         "mcp-this-openapi",
         "--openapi-spec-url", "https://api.example.com/openapi.json",
         "--server-name", "my-api"
+      ]
+    }
+  }
+}
+```
+
+*With method filtering:*
+```json
+{
+  "mcpServers": {
+    "my-api": {
+      "command": "uvx",
+      "args": [
+        "mcp-this-openapi",
+        "--openapi-spec-url", "https://api.example.com/openapi.json",
+        "--include-methods", "GET,POST",
+        "--exclude-methods", "DELETE"
+      ]
+    }
+  }
+}
+```
+
+*All options combined:*
+```json
+{
+  "mcpServers": {
+    "my-api": {
+      "command": "uvx",
+      "args": [
+        "mcp-this-openapi",
+        "--openapi-spec-url", "https://api.example.com/openapi.json",
+        "--server-name", "my-api",
+        "--tool-naming", "auto",
+        "--include-deprecated",
+        "--include-methods", "GET,POST,PUT",
+        "--disable-schema-validation"
       ]
     }
   }

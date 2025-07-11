@@ -13,6 +13,33 @@ import pathlib
 from .server import run_server, run_server_from_args
 
 
+def parse_hybrid_list(arg_list: list[str] | None) -> list[str] | None:
+    """
+    Parse hybrid list arguments that support both repeated flags and comma-separated values.
+
+    Args:
+        arg_list: List of arguments from argparse (with action='append')
+
+    Returns:
+        Flattened list of values, or None if input was None
+
+    Examples:
+        parse_hybrid_list(['GET,POST', 'PUT']) -> ['GET', 'POST', 'PUT']
+        parse_hybrid_list(['GET', 'POST']) -> ['GET', 'POST']
+        parse_hybrid_list(None) -> None
+    """
+    if not arg_list:
+        return None
+
+    result = []
+    for item in arg_list:
+        # Split each item on comma and extend the result
+        result.extend(item.split(','))
+
+    # Remove empty strings and strip whitespace
+    return [method.strip().upper() for method in result if method.strip()]
+
+
 def find_default_config() -> str | None:
     """
     Find the default configuration file in standard locations.
@@ -85,11 +112,30 @@ def main() -> None:
         help="Disable output schema validation for API responses (useful for APIs with broken schema references)",  # noqa: E501
     )
 
+    parser.add_argument(
+        "--include-methods",
+        dest="include_methods",
+        action="append",
+        help="HTTP methods to include (repeatable or comma-separated). Example: --include-methods GET,POST or --include-methods GET --include-methods POST",  # noqa: E501
+    )
+
+    parser.add_argument(
+        "--exclude-methods",
+        dest="exclude_methods",
+        action="append",
+        help="HTTP methods to exclude (repeatable or comma-separated). Example: --exclude-methods DELETE,PATCH or --exclude-methods DELETE --exclude-methods PATCH",  # noqa: E501
+    )
+
     args = parser.parse_args()
 
     # Handle direct CLI arguments
     if args.openapi_spec_url:
         server_name = args.server_name or "openapi-server"
+
+        # Parse hybrid list arguments
+        include_methods = parse_hybrid_list(args.include_methods)
+        exclude_methods = parse_hybrid_list(args.exclude_methods)
+
         try:
             run_server_from_args(
                 args.openapi_spec_url,
@@ -97,6 +143,8 @@ def main() -> None:
                 args.include_deprecated,
                 args.tool_naming,
                 args.disable_schema_validation,
+                include_methods,
+                exclude_methods,
             )
         except KeyboardInterrupt:
             print("\n🛑 Server stopped by user", file=sys.stderr)
