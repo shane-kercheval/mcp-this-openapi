@@ -44,18 +44,26 @@ def generate_base_tool_name_from_path(method: str, path: str) -> str:
     """
     Generate a clean base tool name from HTTP method and path (without version).
 
-    Examples:
-        POST /api/query/ -> post_query
-        GET /schemas/ -> get_schemas
-        POST /query/txt-2-sql -> post_query_txt_2_sql
-        PUT /prompts/{prompt_id} -> put_prompts
-
     Args:
         method: HTTP method (GET, POST, etc.)
         path: API endpoint path (should have version already stripped)
 
     Returns:
         Clean base tool name
+
+    Examples:
+        >>> generate_base_tool_name_from_path("GET", "/users/")
+        'get_users'
+        >>> generate_base_tool_name_from_path("POST", "/api/users/")
+        'post_users'
+        >>> generate_base_tool_name_from_path("PUT", "/users/{user_id}/")
+        'put_users'
+        >>> generate_base_tool_name_from_path("DELETE", "/users/{user_id}/posts/{post_id}/")
+        'delete_users_posts'
+        >>> generate_base_tool_name_from_path("GET", "/user-profiles/")
+        'get_user_profiles'
+        >>> generate_base_tool_name_from_path("PATCH", "/api/health-checks/status/")
+        'patch_health_checks_status'
     """
     # Remove leading/trailing slashes and split
     parts = path.strip('/').split('/')
