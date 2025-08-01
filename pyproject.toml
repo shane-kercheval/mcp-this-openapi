@@ -1,6 +1,6 @@
 [project]
 name = "mcp-this-openapi"
-version = "0.0.9"
+version = "0.0.10"
 description = "MCP Server that creates tools from OpenAPI/Swagger specifications"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -19,12 +19,14 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "fastapi>=0.116.1",
     "pip>=25.1.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
     "pytest-timeout>=2.4.0",
     "respx>=0.22.0",
     "ruff>=0.12.2",
+    "uvicorn>=0.35.0",
 ]
 
 [project.scripts]

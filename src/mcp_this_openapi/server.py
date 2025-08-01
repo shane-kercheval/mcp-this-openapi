@@ -11,7 +11,7 @@ from .openapi.filter import filter_openapi_paths
 from .openapi.auth import create_authenticated_client
 from .openapi.url_utils import extract_base_url
 from .openapi.tool_naming import generate_mcp_names_from_spec
-from .openapi.component_fixes import create_component_fixes
+from .openapi.schema_fix import create_schema_fixing_component_fn
 
 
 async def create_mcp_server(config: Config) -> FastMCP:
@@ -51,10 +51,10 @@ async def create_mcp_server(config: Config) -> FastMCP:
     if config.tool_naming == "auto":
         mcp_names = generate_mcp_names_from_spec(spec, use_operation_id=False)
 
-    # Create component function with parameter conversion and optional schema validation disabling
-    mcp_component_fn = create_component_fixes(
-        disable_output_validation=config.disable_schema_validation,
-    )
+    # Create schema fixing component function if needed
+    mcp_component_fn = None
+    if config.disable_schema_validation:
+        mcp_component_fn = create_schema_fixing_component_fn(disable_validation=True)
 
     # Create FastMCP server
     return FastMCP.from_openapi(
