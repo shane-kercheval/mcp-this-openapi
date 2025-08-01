@@ -128,7 +128,7 @@ mcp-this-openapi \
 - `--server-name NAME` - Name for the MCP server (optional, defaults to "openapi-server")
 - `--include-deprecated` - Include deprecated endpoints (excluded by default)
 - `--tool-naming {default,auto}` - Tool naming strategy (default: "default")
-- `--disable-schema-validation` - Disable API response schema validation (useful for APIs with broken schemas)
+- `--disable-schema-validation` - Disable API response schema validation (use when you get "PointerToNowhere" errors from broken schema references)
 - `--include-methods METHODS` - HTTP methods to include (repeatable or comma-separated)
 - `--exclude-methods METHODS` - HTTP methods to exclude (repeatable or comma-separated)
 - `--config-path PATH` - Path to YAML configuration file (mutually exclusive with --openapi-spec-url)
@@ -374,13 +374,30 @@ tool_naming: "auto"  # Tools named like "get_users", "post_users"
 ```
 
 **Schema Validation**:
+
+The `disable_schema_validation` flag provides a workaround for limitations in FastMCP's schema resolution. This allows API tools to function even when the OpenAPI spec has references that FastMCP cannot properly resolve.
+
 ```yaml
 # Default: enable schema validation for API responses
 disable_schema_validation: false
 
-# Disable if you get "PointerToNowhere" or other schema reference errors
+# Disable validation when you encounter schema errors
 disable_schema_validation: true
 ```
+
+**When to use `disable_schema_validation: true`:**
+- You get "PointerToNowhere" or similar schema resolution errors
+- The API works fine but FastMCP fails to resolve the OpenAPI schema references
+- Common issues that trigger FastMCP limitations:
+  - Broken schema references (e.g., `#/components/schemas/` vs `#/$defs/` mismatches)
+  - Complex cross-version references (e.g., v1 schemas referenced in v2 endpoints)
+  - Long namespaced schema names that cause resolution issues
+  - External references that can't be resolved
+
+**How it works:**
+When enabled, this flag disables JSON schema validation for API responses while keeping the API call functionality intact. This is a pragmatic workaround that prioritizes functionality over strict validation until FastMCP's schema resolution improves.
+
+**Note:** This is a workaround for current limitations in FastMCP's OpenAPI schema resolver, not an issue with the OpenAPI specifications themselves.
 
 ### Environment Variables
 

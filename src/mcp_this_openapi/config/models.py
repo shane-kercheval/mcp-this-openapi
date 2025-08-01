@@ -44,5 +44,5 @@ class Config(BaseModel):
     )
     disable_schema_validation: bool = Field(
         default=False,
-        description="Disable output schema validation for API responses (useful for APIs with broken schema references)",  # noqa: E501
+        description="Disable output schema validation for API responses. Use when you get 'PointerToNowhere' errors from broken schema references, cross-version references, or external references that can't be resolved",  # noqa: E501
     )
